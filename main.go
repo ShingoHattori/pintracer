@@ -90,10 +90,11 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 
 func main() {
 	//dest := "ftp.tsukuba.wide.ad.jp"
-	dest := "202.222.11.105"
-	if len(os.Args) > 1 {
-		dest = os.Args[1]
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: go run main.go <destination>")
+		return
 	}
+	dest := os.Args[1]
 
 	// Open a connection for listening
 	c, err := net.ListenPacket("ip4:icmp", "0.0.0.0")
