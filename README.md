@@ -9,7 +9,7 @@ tracerouteをしてみつけたホストに対して，個別のwindowからping
 
 ソケットを触りに行くので，root権限が必要．
 
-タイムアウトしたホストについてはIPアドレスを引けないので，表示しない．
+タイムアウトしたホストについてはIPアドレスを引けないので，表示しない．ホスト名はFQDNもIPアドレスも対応．
 
 ```
 $ sudo go run main.go ftp.tsukuba.wide.ad.jp
