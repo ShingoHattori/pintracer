@@ -12,7 +12,7 @@ import (
 
 // sendICMPEchoRequest sends an ICMP Echo Request with specified destination and TTL,
 // and returns the IP address of the host that sent the ICMP Echo Reply.
-func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string, *icmp.Type, error) {
+func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string, icmp.Type, error) {
 	p := ipv4.NewPacketConn(*c)
 
 	// Set TTL
@@ -68,20 +68,20 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 		if !ok {
 			return "", nil, fmt.Errorf("invalid peer address type")
 		}
-		return peerAddr.String(), &rm.Type, nil
+		return peerAddr.String(), rm.Type, nil
 	case ipv4.ICMPTypeTimeExceeded:
 		peerAddr, ok := peer.(*net.IPAddr)
 		if !ok {
 			return "", nil, fmt.Errorf("invalid peer address type")
 		}
-		return peerAddr.String(), &rm.Type, nil
+		return peerAddr.String(), rm.Type, nil
 	default:
 		return "", nil, fmt.Errorf("unexpected message type: %v", rm.Type)
 	}
 }
 
 func main() {
-	dest := "8.8.8.8"
+	dest := "ftp.tsukuba.wide.ad.jp"
 	if len(os.Args) > 1 {
 		dest = os.Args[1]
 	}
@@ -94,12 +94,27 @@ func main() {
 	}
 	defer c.Close()
 
-	// Send an ICMP Echo Request and get the reply
-	replyHost, _, err := sendICMPEchoRequest(dest, 1, &c)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
+	maxHop := 64
 
-	fmt.Println("Reply from:", replyHost)
+	for i := 1; i < maxHop; i++ {
+		replyHost, msgType, err := sendICMPEchoRequest(dest, i, &c)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			return
+		}
+		if msgType == ipv4.ICMPTypeEchoReply {
+			fmt.Println(replyHost)
+			break
+		} else {
+			fmt.Println(replyHost)
+		}
+	}
+	// Send an ICMP Echo Request and get the reply
+	// replyHost, _, err := sendICMPEchoRequest(dest, 1, &c)
+	// if err != nil {
+	// 	fmt.Println("Error:", err)
+	// 	return
+	// }
+
+	//fmt.Println("Reply from:", replyHost)
 }
