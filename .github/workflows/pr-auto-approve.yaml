@@ -21,3 +21,6 @@ jobs:
       - uses: hmarr/auto-approve-action@v4
       with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      env:
+          # github-actions[bot]のトークンを使って作成するために設定
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
