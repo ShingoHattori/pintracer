@@ -72,6 +72,8 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 		return "", nil, fmt.Errorf("failed to parse reply message: %v", err)
 	}
 
+	pwekgpwejoijweogijaw
+
 	switch rm.Type {
 	case ipv4.ICMPTypeEchoReply:
 		// Successfully received an ICMP Echo Reply
