@@ -56,7 +56,10 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 
 	// Prepare to read the reply
 	reply := make([]byte, 1500)
-	(*c).SetReadDeadline(time.Now().Add(3 * time.Second))
+	err = (*c).SetReadDeadline(time.Now().Add(3 * time.Second))
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to read reply: %v", err)
+	}
 
 	n, peer, err := (*c).ReadFrom(reply)
 	if err != nil {
