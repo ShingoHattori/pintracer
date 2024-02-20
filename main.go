@@ -81,7 +81,7 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 }
 
 func main() {
-	dest := "ftp.tsukuba.wide.ad.jp"
+	dest := "192.168.150.1"
 	if len(os.Args) > 1 {
 		dest = os.Args[1]
 	}
@@ -95,6 +95,7 @@ func main() {
 	defer c.Close()
 
 	maxHop := 64
+	var hops []string
 
 	for i := 1; i < maxHop; i++ {
 		replyHost, msgType, err := sendICMPEchoRequest(dest, i, &c)
@@ -102,19 +103,15 @@ func main() {
 			fmt.Println("Error: ", err)
 			return
 		}
-		if msgType == ipv4.ICMPTypeEchoReply {
+		if msgType != ipv4.ICMPTypeEchoReply {
+			hops = append(hops, replyHost)
 			fmt.Println(replyHost)
-			break
 		} else {
 			fmt.Println(replyHost)
+			hops = append(hops, replyHost)
+			break
 		}
 	}
-	// Send an ICMP Echo Request and get the reply
-	// replyHost, _, err := sendICMPEchoRequest(dest, 1, &c)
-	// if err != nil {
-	// 	fmt.Println("Error:", err)
-	// 	return
-	// }
 
-	//fmt.Println("Reply from:", replyHost)
+	fmt.Println(hops)
 }
