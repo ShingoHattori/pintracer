@@ -17,10 +17,8 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      # これでapproveするみたい
       - uses: hmarr/auto-approve-action@v4
-      with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      env:
-          # github-actions[bot]のトークンを使って作成するために設定
+        with:
+          github-token: ${{ secrets.SOME_USERS_PAT }}
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
