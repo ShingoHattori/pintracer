@@ -1,7 +1,3 @@
 # pintracer
 
 tracerouteをしてみつけたホストに対して，個別のwindowからpingを飛ばすのはあまりにも非効率なので，tracerouteで見つけたホストの全てに対して，単一のコマンドによって常時pingを飛ばし，その結果を見やすく表示するためのコード．
-
-https://github.com/aeden/traceroute/
-
-などを利用すると，tracerotueを自分で実装せずに済んで嬉しいかもしれない．
