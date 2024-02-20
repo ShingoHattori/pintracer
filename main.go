@@ -89,8 +89,8 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 }
 
 func main() {
-	dest := "ftp.tsukuba.wide.ad.jp"
-	//dest := "192.168.150.1"
+	//dest := "ftp.tsukuba.wide.ad.jp"
+	dest := "202.222.11.105"
 	if len(os.Args) > 1 {
 		dest = os.Args[1]
 	}
@@ -106,11 +106,12 @@ func main() {
 	maxHop := 64
 	var hops []HopResult
 
+	fmt.Println("Tracing route to ", dest)
 	for i := 1; i < maxHop; i++ {
 		replyHost, msgType, err := sendICMPEchoRequest(dest, i, &c)
 		if err != nil {
-			fmt.Println("Error: ", err)
-			return
+			fmt.Printf("Error: %v at %d \n", err, i)
+			//hops = append(hops, HopResult{Hop: i, Host: ""})
 		}
 		hops = append(hops, HopResult{Hop: i, Host: replyHost})
 		if msgType == ipv4.ICMPTypeEchoReply {
@@ -129,14 +130,16 @@ func main() {
 		wg.Add(1)
 		go func(hop HopResult) {
 			for {
-				_, icmpType, err := sendICMPEchoRequest(hop.Host, 64, &c)
-				result := "Error"
-				if err == nil {
-					result = fmt.Sprintf("Recv %v", icmpType)
-				}
-				resultChan <- HopResult{Hop: hop.Hop, Host: hop.Host, Result: result}
+				if hop.Host != "" {
+					_, icmpType, err := sendICMPEchoRequest(hop.Host, 64, &c)
+					result := "Error"
+					if err == nil {
+						result = fmt.Sprintf("Recv %v", icmpType)
+					}
+					resultChan <- HopResult{Hop: hop.Hop, Host: hop.Host, Result: result}
 
-				time.Sleep(1 * time.Second)
+					time.Sleep(1 * time.Second)
+				}
 			}
 		}(hop)
 	}
@@ -163,4 +166,5 @@ func main() {
 	}()
 
 	wg.Wait()
+
 }
