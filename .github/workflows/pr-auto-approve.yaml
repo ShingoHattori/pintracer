@@ -7,7 +7,26 @@ on:
       - synchronize
       - ready_for_review
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '^1.17' # Goのバージョンを指定
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.42.1 # golangci-lintのバージョンを指定
+          args: run main.go
   approve:
+    needs: lint 
     # このJobを実行する時の条件
     # prの作成者が所有者と同じ + draftではない
     if: |
