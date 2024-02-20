@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
+	"sync"
 	"time"
 
 	"golang.org/x/net/icmp"
@@ -11,8 +13,9 @@ import (
 )
 
 type HopResult struct {
-	Address string
-	Result  string
+	Hop    int
+	Host   string
+	Result string
 }
 
 // sendICMPEchoRequest sends an ICMP Echo Request with specified destination and TTL,
@@ -86,7 +89,7 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 }
 
 func main() {
-	dest := "202.224.52.158"
+	dest := "ftp.tsukuba.wide.ad.jp"
 	//dest := "192.168.150.1"
 	if len(os.Args) > 1 {
 		dest = os.Args[1]
@@ -101,7 +104,7 @@ func main() {
 	defer c.Close()
 
 	maxHop := 64
-	var hops []string
+	var hops []HopResult
 
 	for i := 1; i < maxHop; i++ {
 		replyHost, msgType, err := sendICMPEchoRequest(dest, i, &c)
@@ -109,7 +112,7 @@ func main() {
 			fmt.Println("Error: ", err)
 			return
 		}
-		hops = append(hops, replyHost)
+		hops = append(hops, HopResult{Hop: i, Host: replyHost})
 		if msgType == ipv4.ICMPTypeEchoReply {
 			break
 		}
@@ -117,29 +120,47 @@ func main() {
 
 	fmt.Println(hops)
 
-	results := make(map[string]string)
-	resultChan := make(chan map[string]string)
-	//resultChan := make(chan HopResult, len(hops))
+	//results := make(map[string]string)
+	//resultChan := make(chan map[string]string)
+	resultChan := make(chan HopResult)
+	var wg sync.WaitGroup
+
 	for _, hop := range hops {
-		go func(hop string) {
+		wg.Add(1)
+		go func(hop HopResult) {
 			for {
-				_, icmpType, err := sendICMPEchoRequest(hop, 64, &c)
-				if err != nil {
-					results[hop] = fmt.Sprintf("Error: %v", err)
-				} else {
-					results[hop] = fmt.Sprintf("Recv %v", icmpType)
+				_, icmpType, err := sendICMPEchoRequest(hop.Host, 64, &c)
+				result := "Error"
+				if err == nil {
+					result = fmt.Sprintf("Recv %v", icmpType)
 				}
-				resultChan <- results
+				resultChan <- HopResult{Hop: hop.Hop, Host: hop.Host, Result: result}
 
 				time.Sleep(1 * time.Second)
 			}
 		}(hop)
 	}
 
-	for updatedResults := range resultChan {
-		for hop, result := range updatedResults {
-			fmt.Printf("%s : %s\n", hop, result)
+	go func() {
+		for result := range resultChan {
+			// 結果を更新
+			for i, hop := range hops {
+				if hop.Hop == result.Hop {
+					hops[i].Result = result.Result
+					break
+				}
+			}
+			// 結果をホップ番号でソート
+			sort.Slice(hops, func(i, j int) bool {
+				return hops[i].Hop < hops[j].Hop
+			})
+			for _, hop := range hops {
+				fmt.Printf("%d: %s : %s\n", hop.Hop, hop.Host, hop.Result)
+			}
+			fmt.Printf("--------------------------------------------------\n")
+
 		}
-		fmt.Println("------")
-	}
+	}()
+
+	wg.Wait()
 }
