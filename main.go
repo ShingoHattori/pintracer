@@ -10,6 +10,11 @@ import (
 	"golang.org/x/net/ipv4"
 )
 
+type HopResult struct {
+	Address string
+	Result  string
+}
+
 // sendICMPEchoRequest sends an ICMP Echo Request with specified destination and TTL,
 // and returns the IP address of the host that sent the ICMP Echo Reply.
 func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string, icmp.Type, error) {
@@ -81,7 +86,8 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 }
 
 func main() {
-	dest := "192.168.150.1"
+	dest := "202.224.52.158"
+	//dest := "192.168.150.1"
 	if len(os.Args) > 1 {
 		dest = os.Args[1]
 	}
@@ -103,15 +109,37 @@ func main() {
 			fmt.Println("Error: ", err)
 			return
 		}
-		if msgType != ipv4.ICMPTypeEchoReply {
-			hops = append(hops, replyHost)
-			fmt.Println(replyHost)
-		} else {
-			fmt.Println(replyHost)
-			hops = append(hops, replyHost)
+		hops = append(hops, replyHost)
+		if msgType == ipv4.ICMPTypeEchoReply {
 			break
 		}
 	}
 
 	fmt.Println(hops)
+
+	results := make(map[string]string)
+	resultChan := make(chan map[string]string)
+	//resultChan := make(chan HopResult, len(hops))
+	for _, hop := range hops {
+		go func(hop string) {
+			for {
+				_, icmpType, err := sendICMPEchoRequest(hop, 64, &c)
+				if err != nil {
+					results[hop] = fmt.Sprintf("Error: %v", err)
+				} else {
+					results[hop] = fmt.Sprintf("Recv %v", icmpType)
+				}
+				resultChan <- results
+
+				time.Sleep(1 * time.Second)
+			}
+		}(hop)
+	}
+
+	for updatedResults := range resultChan {
+		for hop, result := range updatedResults {
+			fmt.Printf("%s : %s\n", hop, result)
+		}
+		fmt.Println("------")
+	}
 }
