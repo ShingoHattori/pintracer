@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"sort"
@@ -13,9 +15,9 @@ import (
 )
 
 type HopResult struct {
-	Hop    int
-	Host   string
-	Result string
+	Hop       int
+	Host      string
+	ResultStr string
 }
 
 // sendICMPEchoRequest sends an ICMP Echo Request with specified destination and TTL,
@@ -87,7 +89,7 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 		}
 		return peerAddr.String(), rm.Type, nil
 	default:
-		return "", nil, fmt.Errorf("unexpected message type: %v", rm.Type)
+		return "", rm.Type, fmt.Errorf("unexpected message type: %v", rm.Type)
 	}
 }
 
@@ -95,13 +97,27 @@ func main() {
 
 	// deamonで動作しているときは，死んだ瞬間をテキストファイルに記述する．
 	deamon := flag.Bool("d", false, "Enable deamon mode")
+	flag.Parse()
 
-	//dest := "ftp.tsukuba.wide.ad.jp"
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run main.go <destination>")
-		return
+	logFile, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
 	}
-	dest := os.Args[1]
+	defer logFile.Close()
+
+	// ログの出力先を設定
+	log.SetOutput(logFile)
+
+	// ログレベルの設定（オプション）
+	log.SetFlags(log.Ldate | log.Ltime)
+
+	// フラグ以外の引数を取得（宛先アドレスなど）
+	args := flag.Args()
+	if len(args) < 1 {
+		fmt.Println("Usage: <program> [-d] destination")
+		os.Exit(1)
+	}
+	dest := args[0] // 宛先アドレス
 
 	// Open a connection for listening
 	c, err := net.ListenPacket("ip4:icmp", "0.0.0.0")
@@ -127,8 +143,6 @@ func main() {
 		}
 	}
 
-	fmt.Println(hops)
-
 	//results := make(map[string]string)
 	//resultChan := make(chan map[string]string)
 	resultChan := make(chan HopResult)
@@ -142,9 +156,9 @@ func main() {
 					_, icmpType, err := sendICMPEchoRequest(hop.Host, 64, &c)
 					result := "Error"
 					if err == nil {
-						result = fmt.Sprintf("Recv %v", icmpType)
+						result = fmt.Sprintf("%v", icmpType)
 					}
-					resultChan <- HopResult{Hop: hop.Hop, Host: hop.Host, Result: result}
+					resultChan <- HopResult{Hop: hop.Hop, Host: hop.Host, ResultStr: result}
 
 					time.Sleep(1 * time.Second)
 				}
@@ -157,7 +171,7 @@ func main() {
 			// 結果を更新
 			for i, hop := range hops {
 				if hop.Hop == result.Hop {
-					hops[i].Result = result.Result
+					hops[i].ResultStr = result.ResultStr
 					break
 				}
 			}
@@ -165,11 +179,19 @@ func main() {
 			sort.Slice(hops, func(i, j int) bool {
 				return hops[i].Hop < hops[j].Hop
 			})
-			for _, hop := range hops {
-				fmt.Printf("%d: %s : %s\n", hop.Hop, hop.Host, hop.Result)
-			}
-			fmt.Printf("--------------------------------------------------\n")
 
+			if *deamon {
+				for _, hop := range hops {
+					if hop.ResultStr != "echo reply" {
+						log.Printf("%d: %s : %s\n", hop.Hop, hop.Host, hop.ResultStr)
+					}
+				}
+			} else {
+				for _, hop := range hops {
+					fmt.Printf("%d: %s : %s\n", hop.Hop, hop.Host, hop.ResultStr)
+				}
+				fmt.Printf("--------------------------------------------------\n")
+			}
 		}
 	}()
 
