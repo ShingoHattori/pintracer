@@ -92,6 +92,10 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 }
 
 func main() {
+
+	// deamonで動作しているときは，死んだ瞬間をテキストファイルに記述する．
+	deamon := flag.Bool("d", false, "Enable deamon mode")
+
 	//dest := "ftp.tsukuba.wide.ad.jp"
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run main.go <destination>")
