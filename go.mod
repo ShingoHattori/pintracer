@@ -1,6 +1,6 @@
 module pintracer
 
-go 1.23
+go 1.21.4
 
 require (
 	github.com/inancgumus/screen v0.0.0-20190314163918-06e984b86ed3 // indirect
