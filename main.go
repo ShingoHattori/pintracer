@@ -94,12 +94,15 @@ func sendICMPEchoRequest(destination string, TTL int, c *net.PacketConn) (string
 }
 
 func main() {
+	startTime := time.Now()
 
 	// deamonで動作しているときは，死んだ瞬間をテキストファイルに記述する．
 	deamon := flag.Bool("d", false, "Enable deamon mode")
 	flag.Parse()
 
-	logFile, err := os.OpenFile("app.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFilePath := fmt.Sprintf("logs/%s.log", startTime.Format("20060102_150405"))
+
+	logFile, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
